@@ -1,12 +1,27 @@
 ﻿@page "/"
-@attribute [Authorize]
-
+@using Chinook.Components
 @using Chinook.Models
-@using Microsoft.EntityFrameworkCore
+
+@attribute [Authorize]
+@inherits HomeComponent
 
 <PageTitle>Index</PageTitle>
 
 <h1>Artists</h1>
+
+<div class="mb-2">
+    <div class="d-flex">
+        <input type="text" id="SearchArtist" class="form-control" @bind-value="@SearchText" @bind-value:event="oninput" placeholder="Enter Artist Name">
+        <input type="button" value="Search" @onclick="@SearchArtist" />
+        <input type="button" value="Clear" @onclick="@CrealArtist" />
+    </div>
+</div>
+<div class="mb-2">
+    <div class="d-flex">
+        <label>Artist Count : </label>
+        <label>@ArtistCount</label>
+    </div>
+</div>
 
 @if (Artists == null)
 {
@@ -31,28 +46,4 @@ else
             }
         </tbody>
     </table>
-}
-
-@code {
-    private List<Artist> Artists;
-    [Inject] IDbContextFactory<ChinookContext> DbFactory { get; set; }
-
-    protected override async Task OnInitializedAsync() {
-        await InvokeAsync(StateHasChanged);
-        Artists = await GetArtists();
-    }
-
-    public async Task<List<Artist>> GetArtists()
-    {   
-        var dbContext = await DbFactory.CreateDbContextAsync();
-        var users = dbContext.Users.Include(a => a.UserPlaylists).ToList();
-        
-        return dbContext.Artists.ToList();
-    }
-
-    public async Task<List<Album>> GetAlbumsForArtist(int artistId)
-    {
-        var dbContext = await DbFactory.CreateDbContextAsync();
-        return dbContext.Albums.Where(a => a.ArtistId == artistId).ToList();
-    }
 }
