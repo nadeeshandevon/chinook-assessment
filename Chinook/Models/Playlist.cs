@@ -8,11 +8,11 @@
         }
 
         public long PlaylistId { get; set; }
-        public string? Name { get; set; }
-        public long? SortOrder { get; set; }
+        public string Name { get; set; } = null!;
+        public long? SortOrder { get; set; } = null!;
 
         public virtual ICollection<Track> Tracks { get; set; }
-        public virtual ICollection<UserPlaylist> UserPlaylists { get; set; }
+        public virtual ICollection<UserPlaylist> UserPlaylists { get; set; } = null!;
 
     }
 }

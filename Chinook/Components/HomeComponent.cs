@@ -1,59 +1,85 @@
 ﻿using Chinook.Models;
 using Chinook.Repositories;
 using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Authorization;
-using System.Security.Claims;
 
 namespace Chinook.Components
 {
-    public class HomeComponent : ComponentBase
+    public class HomeComponent : ChinookComponentBase
     {
         public List<Artist> Artists = new List<Artist>();
         public string SearchText = string.Empty;
         public long ArtistCount = 0;
-
-        [Inject] IArtistRepository ArtistRepository { get; set; }
+        [Inject] IArtistRepository? ArtistRepository { get; set; }
         [Inject] IPlaylistRepository? PlaylistRepository { get; set; }
         [Inject] AppState? AppState { get; set; }
-        [CascadingParameter] private Task<AuthenticationState> AuthenticationState { get; set; }
+
         protected override async Task OnInitializedAsync()
         {
-            await InvokeAsync(StateHasChanged);
-            Artists = await GetArtists();
-            var userId = await GetUserId();
-            var userPlaylist = await PlaylistRepository.GetPlaylistByUserId(userId);
-            AppState.SetUserPlaylist(userPlaylist);
-        }
-
-        private async Task<string> GetUserId()
-        {
-            var user = (await AuthenticationState).User;
-            var userId = user.FindFirst(u => u.Type.Contains(ClaimTypes.NameIdentifier))?.Value;
-            return userId;
+            try
+            {
+                Artists = await GetArtists();
+                var userId = await GetUserId();
+                var userPlaylist = await PlaylistRepository!.GetPlaylistByUserId(userId);
+                AppState!.SetUserPlaylist(userPlaylist);
+            }
+            catch (Exception ex)
+            {
+                ErrorMessage = ex.Message;
+            }
         }
 
         public async Task SearchArtist()
         {
-            Artists = await GetArtists();
+            try
+            {
+                Artists = await GetArtists();
+            }
+            catch (Exception ex)
+            {
+                ErrorMessage = ex.Message;
+            }
         }
 
-        public async Task CrealArtist()
+        public async Task CrearArtist()
         {
-            SearchText = string.Empty;
-            Artists = await GetArtists();
+            try
+            {
+                SearchText = string.Empty;
+                Artists = await GetArtists();
+            }
+            catch (Exception ex)
+            {
+                ErrorMessage = ex.Message;
+            }
         }
 
         public async Task<List<Artist>> GetArtists()
         {
-            var artists = await ArtistRepository.GetArtists(SearchText);
-            ArtistCount = artists.Count();
-            return artists;
+            try
+            {
+                var artists = await ArtistRepository!.GetArtists(SearchText);
+                ArtistCount = artists.Count();
+                return artists;
+            }
+            catch (Exception ex)
+            {
+                ErrorMessage = ex.Message;
+                return new List<Artist>();
+            }
         }
 
         public async Task<List<Album>> GetAlbumsForArtist(int artistId)
         {
-            var albums = await ArtistRepository.GetAlbumsByArtistId(artistId);
-            return albums;
+            try
+            {
+                var albums = await ArtistRepository!.GetAlbumsByArtistId(artistId);
+                return albums;
+            }
+            catch (Exception ex)
+            {
+                ErrorMessage = ex.Message;
+                return new List<Album>();
+            }
         }
     }
 }

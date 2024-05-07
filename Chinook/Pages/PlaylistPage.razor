@@ -19,6 +19,18 @@
     </div>
 }
 
+@if (!string.IsNullOrWhiteSpace(ErrorMessage))
+{
+    <div class="alert alert-warning fade show">
+        <div class="d-flex align-items-start">
+            <div class="flex-grow-1">
+                @ErrorMessage
+            </div>
+            <button type="button" class="btn-close" aria-label="Close" @onclick="CloseErrorMessage"></button>
+        </div>
+    </div>
+}
+
 @if (Playlist == null)
 {
      <Loading />
@@ -39,19 +51,19 @@ else
                     <td>@track.ArtistName - @track.AlbumTitle - @track.TrackName</td>
                     <td>
                         <div class="d-flex">
-                            @if (Playlist.Name != CommonConstants.MyFavoriteTrackPlayListName)
+                            @if (!string.IsNullOrWhiteSpace(Playlist.Name) && Playlist.Name != CommonConstants.MyFavoriteTrackPlayListName)
                             {
                                 @if (track.IsFavorite)
                                 {
-                                    <a href="#" class="m-1" title="Unark as favorite" @onclick="@(() => UnfavoriteTrack(track.TrackId))" @onclick:preventDefault><i class="bi bi-star-fill"></i></a>
+                                    <a href="#" class="m-1" title="Unark as favorite" @onclick="@(async() => await UnfavoriteTrack(track.TrackId))" @onclick:preventDefault><i class="bi bi-star-fill"></i></a>
                                 }
                                 else
                                 {
-                                    <a href="#" class="m-1" title="Mark as favorite" @onclick="@(() => FavoriteTrack(track.TrackId))" @onclick:preventDefault><i class="bi bi-star"></i></a>
+                                    <a href="#" class="m-1" title="Mark as favorite" @onclick="@(async() => await FavoriteTrack(track.TrackId))" @onclick:preventDefault><i class="bi bi-star"></i></a>
                                 }
 
                             }
-                            <a href="#" class="m-1" title="Remove from this playlist" @onclick="@(() => RemoveTrack(track.TrackId))" @onclick:preventDefault><i class="bi bi-trash"></i></a>
+                            <a href="#" class="m-1" title="Remove from this playlist" @onclick="@(async() => await RemoveTrack(track.TrackId))" @onclick:preventDefault><i class="bi bi-trash"></i></a>
                         </div>
                     </td>
                 </tr>

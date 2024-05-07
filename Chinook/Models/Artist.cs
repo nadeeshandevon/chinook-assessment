@@ -8,7 +8,7 @@
         }
 
         public long ArtistId { get; set; }
-        public string? Name { get; set; }
+        public string? Name { get; set; } = null!;
 
         public virtual ICollection<Album> Albums { get; set; }
     }

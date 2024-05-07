@@ -1,4 +1,5 @@
 ﻿using Chinook.ClientModels;
+using Chinook.Exceptions;
 using Chinook.Helpers;
 using Chinook.Models;
 using Microsoft.EntityFrameworkCore;
@@ -37,6 +38,12 @@ namespace Chinook.Repositories
 
             try
             {
+                if (!string.IsNullOrWhiteSpace(addTrackToPlaylist.Name) &&
+                addTrackToPlaylist.Name.Equals(CommonConstants.MyFavoriteTrackPlayListName, StringComparison.InvariantCultureIgnoreCase))
+                {
+                    addTrackToPlaylist.PlaylistId = await GetMyFavoritePlaylistId(addTrackToPlaylist.UserId);
+                }
+
                 if (addTrackToPlaylist.PlaylistId.HasValue)
                 {
                     playlist = await DbContext.Playlists.Include(t => t.Tracks)
@@ -44,12 +51,12 @@ namespace Chinook.Repositories
 
                     if (playlist == null)
                     {
-                        throw new Exception($"Playlist could not found");
+                        throw new CustomValidationException($"Playlist could not found");
                     }
 
                     if (playlist.Tracks.Any(t => t.TrackId == addTrackToPlaylist.TrackId))
                     {
-                        throw new Exception($"This track is already in {playlist.Name} playlist");
+                        throw new CustomValidationException($"This track is already in {playlist.Name} playlist");
                     }
 
                     playlistId = addTrackToPlaylist.PlaylistId.Value;
@@ -63,11 +70,14 @@ namespace Chinook.Repositories
 
                     playlist = await DbContext.Playlists.Include(t => t.Tracks).Include(t => t.UserPlaylists)
                                 .Where(t => t.UserPlaylists.Any(u => u.UserId == addTrackToPlaylist.UserId)
-                                && t.Name.Trim().ToLower() == addTrackToPlaylist.Name.Trim().ToLower()).FirstOrDefaultAsync();
+                                && t.Name.Trim()
+                                         .ToLower()
+                                         .Equals(addTrackToPlaylist.Name.Trim().ToLower()))
+                                .FirstOrDefaultAsync();
 
                     if (playlist != null)
                     {
-                        throw new Exception($"Playlist already exist");
+                        throw new CustomValidationException($"Playlist already exist");
                     }
 
                     var nextPlaylistid = await DbContext.Playlists.MaxAsync(t => t.PlaylistId) + 1;
@@ -92,7 +102,7 @@ namespace Chinook.Repositories
 
                 if (track == null)
                 {
-                    throw new Exception($"Track could not found");
+                    throw new CustomValidationException($"Track could not found");
                 }
 
                 playlist.Tracks.Add(track);
@@ -125,117 +135,23 @@ namespace Chinook.Repositories
             return true;
         }
 
-        public async Task<bool> AddTrackToFavorite(long trackId, string userId)
+        public async Task<long?> GetMyFavoritePlaylistId(string userId)
         {
             if (string.IsNullOrWhiteSpace(userId))
             {
                 throw new ArgumentNullException($"{nameof(userId)} cannot be empty");
             }
 
-            if (trackId <= 0)
+            var favoritePlaylist = await DbContext.Playlists
+            .Where(t => t.Name == CommonConstants.MyFavoriteTrackPlayListName && t.UserPlaylists.Any(p => p.UserId == userId))
+            .FirstOrDefaultAsync();
+
+            if (favoritePlaylist != null)
             {
-                throw new ArgumentNullException($"{nameof(trackId)} cannot be empty");
+                return favoritePlaylist.PlaylistId;
             }
 
-            long playlistId = 0;
-            using var transaction = await DbContext.Database.BeginTransactionAsync();
-
-            try
-            {
-                var favoritePlaylist = await DbContext.Playlists
-                .Where(t => t.Name == CommonConstants.MyFavoriteTrackPlayListName && t.UserPlaylists.Any(p => p.UserId == userId))
-                .FirstOrDefaultAsync();
-
-                if (favoritePlaylist == null)
-                {
-                    playlistId = await DbContext.Playlists.MaxAsync(t => t.PlaylistId) + 1;
-                    var newFavoritePlaylist = new Models.Playlist
-                    {
-                        PlaylistId = playlistId,
-                        Name = CommonConstants.MyFavoriteTrackPlayListName,
-                        SortOrder = 0
-                    };
-
-                    _ = await DbContext.AddAsync(newFavoritePlaylist);
-                    _ = await DbContext.SaveChangesAsync();
-
-                    favoritePlaylist = newFavoritePlaylist;
-                }
-                else
-                {
-                    playlistId = favoritePlaylist.PlaylistId;
-                }
-
-                var track = await DbContext.Tracks.FirstOrDefaultAsync(t => t.TrackId == trackId);
-
-                if (track == null)
-                {
-                    throw new Exception($"Track could not found");
-                }
-
-                favoritePlaylist.Tracks.Add(track);
-                DbContext.Attach(favoritePlaylist);
-
-                var userPlaylist = await DbContext.UserPlaylists
-                    .FirstOrDefaultAsync(t => t.PlaylistId == favoritePlaylist.PlaylistId && t.UserId == userId);
-
-                if (userPlaylist == null)
-                {
-                    var userPlayList = new UserPlaylist
-                    {
-                        PlaylistId = playlistId,
-                        UserId = userId
-                    };
-
-                    _ = await DbContext.AddAsync(userPlayList);
-                }
-
-                _ = await DbContext.SaveChangesAsync();
-                await transaction.CommitAsync();
-            }
-            catch (Exception)
-            {
-                await transaction.RollbackAsync();
-                throw;
-            }
-
-            return true;
-        }
-
-        public async Task<bool> RemoveTrackFromFavorite(long trackId, string userId)
-        {
-            if (string.IsNullOrWhiteSpace(userId))
-            {
-                throw new ArgumentNullException($"{nameof(userId)} cannot be empty");
-            }
-
-            if (trackId <= 0)
-            {
-                throw new ArgumentNullException($"{nameof(trackId)} cannot be empty");
-            }
-
-            var favoritePlaylist = await DbContext.Playlists.Include(t => t.Tracks)
-                .Where(t => t.Name == CommonConstants.MyFavoriteTrackPlayListName && t.UserPlaylists.Any(p => p.UserId == userId))
-                .FirstOrDefaultAsync();
-
-            if (favoritePlaylist == null)
-            {
-                throw new Exception($"{CommonConstants.MyFavoriteTrackPlayListName} could not found");
-            }
-
-            var track = favoritePlaylist.Tracks.FirstOrDefault(t => t.TrackId == trackId);
-
-            if (track == null)
-            {
-                throw new Exception($"Track could not found");
-            }
-
-            favoritePlaylist.Tracks.Remove(track);
-            DbContext.Attach(favoritePlaylist);
-
-            _ = await DbContext.SaveChangesAsync();
-
-            return true;
+            return null;
         }
 
         public async Task<bool> RemoveTrackFromPlaylist(long trackId, long playlistId, string userId)
@@ -260,14 +176,14 @@ namespace Chinook.Repositories
 
             if (playlist == null)
             {
-                throw new Exception($"Playlist could not found");
+                throw new CustomValidationException($"Playlist could not found");
             }
 
             var track = playlist.Tracks.FirstOrDefault(t => t.TrackId == trackId);
 
             if (track == null)
             {
-                throw new Exception($"Track could not found");
+                throw new CustomValidationException($"Track could not found");
             }
 
             playlist.Tracks.Remove(track);
@@ -291,7 +207,8 @@ namespace Chinook.Repositories
             }
 
             var tracks = await DbContext.Tracks.Include(t => t.Album)
-                .AsNoTracking().Where(a => a.Album.ArtistId == artistId)
+                .AsNoTracking()
+                .Where(a => a.Album!.ArtistId == artistId)
                 .Include(a => a.Album)
                 .Select(t => new PlaylistTrack()
                 {
@@ -317,25 +234,48 @@ namespace Chinook.Repositories
                 throw new ArgumentNullException($"{nameof(playlistId)} cannot be empty");
             }
 
-            var playlist = DbContext.Playlists.AsNoTracking()
-                .Include(a => a.Tracks).ThenInclude(a => a.Album).ThenInclude(a => a.Artist).Include(a => a.UserPlaylists)
+            var playlist = await DbContext.Playlists.AsNoTracking()
+                .Include(a => a.Tracks)
+                .ThenInclude(a => a.Album)
+                .ThenInclude(a => a.Artist)
+                .Include(a => a.UserPlaylists)
                 .Where(p => p.PlaylistId == playlistId && p.UserPlaylists.Any(u => u.UserId == userId))
-                .Select(p => new ClientModels.Playlist()
+                .Select(p => new
                 {
-                    Name = p.Name,
-                    Tracks = p.Tracks.Select(t => new PlaylistTrack()
+                    p.Name,
+                    Tracks = p.Tracks.Select(t => new
                     {
-                        AlbumTitle = t.Album.Title,
-                        ArtistName = t.Album.Artist.Name,
-                        TrackId = t.TrackId,
+                        AlbumTitle = t.Album != null ? t.Album.Title : string.Empty,
+                        ArtistName = t.Album != null ? t.Album.Artist.Name : string.Empty,
+                        t.TrackId,
                         TrackName = t.Name,
                         IsFavorite = t.Playlists.Where(p => p.UserPlaylists
                         .Any(up => up.UserId == userId && up.Playlist.Name == CommonConstants.MyFavoriteTrackPlayListName)).Any()
-                    }).ToList()
+                    })
                 })
-                .FirstOrDefault();
+                .FirstOrDefaultAsync();
 
-            return playlist;
+            if (playlist == null)
+            {
+                throw new CustomValidationException($"Playlist not found");
+            }
+
+            var returnPlaylist = new ClientModels.Playlist
+            {
+                Name = !string.IsNullOrWhiteSpace(playlist.Name) ? playlist.Name : string.Empty,
+                Tracks = playlist.Tracks
+                .Select(t => new PlaylistTrack()
+                {
+                    AlbumTitle = t.AlbumTitle,
+                    ArtistName = !string.IsNullOrWhiteSpace(t.ArtistName) ? t.ArtistName : string.Empty,
+                    TrackId = t.TrackId,
+                    TrackName = t.TrackName,
+                    IsFavorite = t.IsFavorite
+                }
+                ).ToList()
+            };
+
+            return returnPlaylist;
         }
 
         public async Task<List<ClientModels.Playlist>> GetPlaylistByUserId(string userId)
@@ -343,11 +283,11 @@ namespace Chinook.Repositories
             var playlists = await DbContext.Playlists.Include(t => t.UserPlaylists)
                 .AsNoTracking()
                 .Where(t => t.UserPlaylists.Any(p => p.UserId == userId))
-                .OrderBy(t => t.SortOrder)
+                .OrderBy(t => t.Name == CommonConstants.MyFavoriteTrackPlayListName ? 0 : 1).ThenBy(t => t.SortOrder)
                 .Select(p => new ClientModels.Playlist()
                 {
                     PlaylistId = p.PlaylistId,
-                    Name = p.Name,
+                    Name = !string.IsNullOrWhiteSpace(p.Name) ? p.Name : string.Empty,
                 })
                 .ToListAsync();
 

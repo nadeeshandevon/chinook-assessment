@@ -1,4 +1,5 @@
-﻿using Chinook.Models;
+﻿using Chinook.Exceptions;
+using Chinook.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace Chinook.Repositories
@@ -21,9 +22,9 @@ namespace Chinook.Repositories
             var albums = await DbContext.Albums.AsNoTracking()
                 .Where(a => a.ArtistId == artistId).ToListAsync();
 
-            if (albums == null)
+            if (!albums.Any())
             {
-                throw new Exception($"Artist could not found");
+                throw new CustomValidationException($"Artist could not found");
             }
 
             return albums;
@@ -41,13 +42,13 @@ namespace Chinook.Repositories
                 .Select(t => new ClientModels.Artist()
                 {
                     ArtistId = t.ArtistId,
-                    Name = t.Name
+                    Name = !string.IsNullOrWhiteSpace(t.Name)? t.Name : string.Empty
                 })
                 .FirstOrDefaultAsync(t => t.ArtistId == artistId);
 
             if (artist == null)
             {
-                throw new Exception($"Artist could not found");
+                throw new CustomValidationException($"Artist could not found");
             }
 
             return artist;
@@ -62,13 +63,13 @@ namespace Chinook.Repositories
                 result = await DbContext.Artists.Include(t => t.Albums)
                     .AsNoTracking()
                     .ToListAsync();
-
             }
             else
             {
-                result = DbContext.Artists.Include(t => t.Albums)
+                result = await DbContext.Artists.Include(t => t.Albums)
                     .AsNoTracking()
-                    .Where(t => t.Name.ToLower().Contains(searchName.Trim().ToLower())).ToList();
+                    .Where(t => t.Name != null && t.Name.Trim().ToLower()
+                    .Contains(searchName.Trim().ToLower())).ToListAsync();
             }
 
             return result;

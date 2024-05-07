@@ -16,6 +16,18 @@
     </div>
 }
 
+@if (!string.IsNullOrWhiteSpace(ErrorMessage))
+{
+    <div class="alert alert-warning fade show">
+        <div class="d-flex align-items-start">
+            <div class="flex-grow-1">
+                @ErrorMessage
+            </div>
+            <button type="button" class="btn-close" aria-label="Close" @onclick="CloseErrorMessage"></button>
+        </div>
+    </div>
+}
+
 @if (Artist == null)
 {
     <Loading />
@@ -40,11 +52,11 @@ else
                     <td>
                         @if (track.IsFavorite)
                         {
-                            <a href="#" class="m-1" title="Unmark as favorite" @onclick="@(() => UnfavoriteTrack(track.TrackId))" @onclick:preventDefault><i class="bi bi-star-filled"></i></a>
+                            <a href="#" class="m-1" title="Unmark as favorite" @onclick="@(async() => await UnfavoriteTrack(track.TrackId))" @onclick:preventDefault><i class="bi bi-star-filled"></i></a>
                         }
                         else
                         {
-                            <a href="#" class="m-1" title="Mark as favorite" @onclick="@(() => FavoriteTrack(track.TrackId))" @onclick:preventDefault><i class="bi bi-star"></i></a>
+                            <a href="#" class="m-1" title="Mark as favorite" @onclick="@(async() => await FavoriteTrack(track.TrackId))" @onclick:preventDefault><i class="bi bi-star"></i></a>
                         }
                         <a href="#" class="m-1" title="Add to playlist" @onclick="@(() => OpenPlaylistDialog(track.TrackId))" @onclick:preventDefault><i class="bi bi-file-earmark-plus"></i></a>
                     </td>

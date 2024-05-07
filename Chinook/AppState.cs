@@ -2,16 +2,32 @@
 {
     public class AppState
     {
-        public List<ClientModels.Playlist> UserPlaylist { get; private set; } = new List<ClientModels.Playlist>();
+        private List<ClientModels.Playlist> _userPlaylist = new List<ClientModels.Playlist>();
 
         public event Action OnChange;
 
-        public void SetUserPlaylist(List<ClientModels.Playlist> userPlaylist)
+        private readonly object _lock = new object();
+
+        public List<ClientModels.Playlist> UserPlaylist
         {
-            UserPlaylist = userPlaylist;
-            NotifyStateChanged();
+            get
+            {
+                lock (_lock)
+                {
+                    return _userPlaylist;
+                }
+            }
         }
 
-        private void NotifyStateChanged() => OnChange?.Invoke();
+        public void SetUserPlaylist(List<ClientModels.Playlist> userPlaylist)
+        {
+            lock (_lock)
+            {
+                _userPlaylist = userPlaylist;
+                NotifyStateChanged();
+            }
+        }
+
+        private void NotifyStateChanged () => OnChange?.Invoke();
     }
 }
