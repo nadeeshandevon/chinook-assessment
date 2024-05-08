@@ -49,12 +49,7 @@ namespace Chinook.Repositories
                     playlist = await DbContext.Playlists.Include(t => t.Tracks)
                     .FirstOrDefaultAsync(t => t.PlaylistId == addTrackToPlaylist.PlaylistId.Value);
 
-                    if (playlist == null)
-                    {
-                        throw new CustomValidationException($"Playlist could not found");
-                    }
-
-                    if (playlist.Tracks.Any(t => t.TrackId == addTrackToPlaylist.TrackId))
+                    if (playlist!.Tracks.Any(t => t.TrackId == addTrackToPlaylist.TrackId))
                     {
                         throw new CustomValidationException($"This track is already in {playlist.Name} playlist");
                     }
@@ -100,12 +95,7 @@ namespace Chinook.Repositories
 
                 var track = await DbContext.Tracks.FirstOrDefaultAsync(t => t.TrackId == addTrackToPlaylist.TrackId);
 
-                if (track == null)
-                {
-                    throw new CustomValidationException($"Track could not found");
-                }
-
-                playlist.Tracks.Add(track);
+                playlist.Tracks.Add(track!);
                 DbContext.Attach(playlist);
 
                 var userPlaylist = await DbContext.UserPlaylists
@@ -146,12 +136,7 @@ namespace Chinook.Repositories
             .Where(t => t.Name == CommonConstants.MyFavoriteTrackPlayListName && t.UserPlaylists.Any(p => p.UserId == userId))
             .FirstOrDefaultAsync();
 
-            if (favoritePlaylist != null)
-            {
-                return favoritePlaylist.PlaylistId;
-            }
-
-            return null;
+            return favoritePlaylist!.PlaylistId;
         }
 
         public async Task<bool> RemoveTrackFromPlaylist(long trackId, long playlistId, string userId)
@@ -174,19 +159,9 @@ namespace Chinook.Repositories
             var playlist = await DbContext.Playlists.Include(t => t.Tracks)
                 .FirstOrDefaultAsync(t => t.PlaylistId == playlistId);
 
-            if (playlist == null)
-            {
-                throw new CustomValidationException($"Playlist could not found");
-            }
+            var track = playlist!.Tracks.FirstOrDefault(t => t.TrackId == trackId);
 
-            var track = playlist.Tracks.FirstOrDefault(t => t.TrackId == trackId);
-
-            if (track == null)
-            {
-                throw new CustomValidationException($"Track could not found");
-            }
-
-            playlist.Tracks.Remove(track);
+            playlist.Tracks.Remove(track!);
             DbContext.Attach(playlist);
 
             _ = await DbContext.SaveChangesAsync();
@@ -255,14 +230,9 @@ namespace Chinook.Repositories
                 })
                 .FirstOrDefaultAsync();
 
-            if (playlist == null)
-            {
-                throw new CustomValidationException($"Playlist not found");
-            }
-
             var returnPlaylist = new ClientModels.Playlist
             {
-                Name = !string.IsNullOrWhiteSpace(playlist.Name) ? playlist.Name : string.Empty,
+                Name = !string.IsNullOrWhiteSpace(playlist!.Name) ? playlist.Name : string.Empty,
                 Tracks = playlist.Tracks
                 .Select(t => new PlaylistTrack()
                 {

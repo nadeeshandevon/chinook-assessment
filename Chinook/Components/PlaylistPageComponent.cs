@@ -1,9 +1,8 @@
 ﻿using Chinook.ClientModels;
-using Chinook.Exceptions;
-using Chinook.Helpers;
 using Chinook.Models;
 using Chinook.Repositories;
 using Microsoft.AspNetCore.Components;
+using NuGet.DependencyResolver;
 
 namespace Chinook.Components
 {
@@ -11,7 +10,6 @@ namespace Chinook.Components
     {
         [Parameter] public long PlaylistId { get; set; }
         [Inject] IPlaylistRepository? PlaylistRepository { get; set; } = default!;
-
         public ClientModels.Playlist Playlist = new();
 
         protected override async Task OnInitializedAsync()
@@ -19,6 +17,7 @@ namespace Chinook.Components
             try
             {
                 CurrentUserId = await GetUserId();
+                await LoadPlaylist();
             }
             catch (Exception ex)
             {
@@ -41,23 +40,15 @@ namespace Chinook.Components
         private async Task LoadPlaylist()
         {
             Playlist =  await PlaylistRepository!.GetPlaylistByPlaylistId(PlaylistId, CurrentUserId);
+            Tracks = Playlist.Tracks;
         }
 
         public async Task FavoriteTrack(long trackId)
         {
             try
             {
-                var track = Playlist.Tracks.FirstOrDefault(t => t.TrackId == trackId);
-                var addTrackToPlaylist = new AddTrackToPlaylist
-                {
-                    TrackId = trackId,
-                    UserId = CurrentUserId,
-                    Name = CommonConstants.MyFavoriteTrackPlayListName,
-                };
-
-                _ = await PlaylistRepository!.AddTrackToPlaylist(addTrackToPlaylist);
-                await LoadPlaylist();
-                InfoMessage = $"Track {track!.ArtistName} - {track.AlbumTitle} - {track.TrackName} added to playlist Favorites.";
+                await FavoriteTrackByTrackId(trackId);
+                await OnInitializedAsync();
             }
             catch (Exception ex)
             {
@@ -69,17 +60,8 @@ namespace Chinook.Components
         {
             try
             {
-                var track = Playlist.Tracks.FirstOrDefault(t => t.TrackId == trackId);
-                var myFavoritePlaylistId = await PlaylistRepository!.GetMyFavoritePlaylistId(CurrentUserId);
-
-                if (myFavoritePlaylistId == null)
-                {
-                    throw new CustomValidationException($"My favorite playlist not found");
-                }
-
-                _ = await PlaylistRepository.RemoveTrackFromPlaylist(trackId, myFavoritePlaylistId!.Value, CurrentUserId);
-                await LoadPlaylist();
-                InfoMessage = $"Track {track!.ArtistName} - {track.AlbumTitle} - {track.TrackName} removed from playlist Favorites.";
+                await UnfavoriteTrackByTrackId(trackId);
+                await OnInitializedAsync();
             }
             catch (Exception ex)
             {

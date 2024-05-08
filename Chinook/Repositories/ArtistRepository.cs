@@ -46,12 +46,7 @@ namespace Chinook.Repositories
                 })
                 .FirstOrDefaultAsync(t => t.ArtistId == artistId);
 
-            if (artist == null)
-            {
-                throw new CustomValidationException($"Artist could not found");
-            }
-
-            return artist;
+            return artist!;
         }
 
         public async Task<List<Artist>> GetArtists(string searchName)
