@@ -2,6 +2,11 @@ namespace Chinook.ClientModels;
 
 public class Playlist
 {
-    public string Name { get; set; }
+    public Playlist()
+    {
+        Tracks = new List<PlaylistTrack>();
+    }
+    public long PlaylistId { get; set; }
+    public string? Name { get; set; } = null!;
     public List<PlaylistTrack> Tracks { get; set; }
 }

@@ -1,4 +1,8 @@
-﻿<div class="top-row ps-3 navbar navbar-dark">
+﻿@using Chinook.Repositories
+@using System.Security.Claims
+@implements IDisposable
+
+<div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
         <a class="navbar-brand" href="">Chinook</a>
         <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
@@ -7,7 +11,7 @@
     </div>
 </div>
 
-<div class="@NavMenuCssClass" @onclick="ToggleNavMenu">
+<div class="@navMenuCssClass" @onclick="ToggleNavMenu">
     <nav class="flex-column">
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
@@ -15,23 +19,52 @@
             </NavLink>
         </div>
         <div class="nav-item px-3">
-@* 
-            <NavLink class="nav-link" href="playlist/playlistnumber">
-                <i class="bi bi-music-note-list me-3" style="font-size: 1.25em"></i>My favorite tracks
-            </NavLink>
-*@
-</div>
+            @foreach (var playlist in AppState.UserPlaylist)
+            {
+                var playlistLink = $"/playlist/{playlist.PlaylistId}";
+                <NavLink class="nav-link" href="@playlistLink" >
+                    <i class="bi bi-music-note-list me-3" style="font-size: 1.25em"></i>@playlist.Name
+                </NavLink>
+            }
+        </div>
 
     </nav>
 </div>
 
 @code {
+    [Inject] AppState AppState { get; set; }
+    [Inject] IPlaylistRepository UserPlayListRepo { get; set; }
+    [CascadingParameter] private Task<AuthenticationState> AuthenticationState { get; set; }
+    
+    private List<ClientModels.Playlist> UserPlaylist = new();
     private bool collapseNavMenu = true;
-
-    private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
+    private string? navMenuCssClass => collapseNavMenu ? "collapse" : null;
 
     private void ToggleNavMenu()
     {
         collapseNavMenu = !collapseNavMenu;
+    }
+
+    protected override void OnInitialized()
+    {
+        AppState.OnChange += StateHasChanged;
+    }
+
+    public void Dispose()
+    {
+        AppState.OnChange -= StateHasChanged;
+    }
+
+    private async Task<string> GetUserId()
+    {
+        var user = (await AuthenticationState).User;
+        var userId = user.FindFirst(u => u.Type.Contains(ClaimTypes.NameIdentifier))?.Value;
+        return userId;
+    }
+
+    private void LoadUserPlaylists()
+    {
+        var userId = GetUserId().ConfigureAwait(false).GetAwaiter().GetResult();
+        UserPlaylist = UserPlayListRepo.GetPlaylistByUserId(userId).ConfigureAwait(false).GetAwaiter().GetResult();
     }
 }
