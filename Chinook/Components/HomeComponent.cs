@@ -40,7 +40,7 @@ namespace Chinook.Components
             }
         }
 
-        public async Task CrearArtist()
+        public async Task ClearArtist()
         {
             try
             {

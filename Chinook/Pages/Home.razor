@@ -13,7 +13,7 @@
     <div class="d-flex">
         <input type="text" id="SearchArtist" class="form-control" @bind-value="@SearchText" @bind-value:event="oninput" placeholder="Enter Artist Name">
         <input type="button" value="Search" @onclick="@(async() => await SearchArtist())" @onclick:preventDefault />
-        <input type="button" value="Clear" @onclick="@(async() => await CrearArtist())" @onclick:preventDefault />
+        <input type="button" value="Clear" @onclick="@(async() => await ClearArtist())" @onclick:preventDefault />
     </div>
 </div>
 <div class="mb-2">
