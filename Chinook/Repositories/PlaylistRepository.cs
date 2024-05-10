@@ -136,7 +136,12 @@ namespace Chinook.Repositories
             .Where(t => t.Name == CommonConstants.MyFavoriteTrackPlayListName && t.UserPlaylists.Any(p => p.UserId == userId))
             .FirstOrDefaultAsync();
 
-            return favoritePlaylist!.PlaylistId;
+            if(favoritePlaylist != null)
+            {
+                return favoritePlaylist!.PlaylistId;
+            }
+
+            return null;
         }
 
         public async Task<bool> RemoveTrackFromPlaylist(long trackId, long playlistId, string userId)

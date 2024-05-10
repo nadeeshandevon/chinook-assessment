@@ -16,13 +16,7 @@ namespace Chinook.Components
         {
             try
             {
-                CurrentUserId = await GetUserId();
-
-                Artist = await ArtistRepository!.GetArtistByArtistId(ArtistId);
-                Tracks = await PlaylistRepository!.GetPlaylistTracksByArtistId(ArtistId, CurrentUserId);
-                Playlists = await PlaylistRepository.GetPlaylistByUserId(CurrentUserId);
-                AppState!.SetUserPlaylist(Playlists);
-                SelectedPlaylist = -1;
+                await LoadInitialData();
             }
             catch (Exception ex)
             {
@@ -30,12 +24,23 @@ namespace Chinook.Components
             }
         }
 
+        private async Task LoadInitialData()
+        {
+            CurrentUserId = await GetUserId();
+
+            Artist = await ArtistRepository!.GetArtistByArtistId(ArtistId);
+            Tracks = await PlaylistRepository!.GetPlaylistTracksByArtistId(ArtistId, CurrentUserId);
+            Playlists = await PlaylistRepository.GetPlaylistByUserId(CurrentUserId);
+            AppState!.SetUserPlaylist(Playlists);
+            SelectedPlaylist = -1;
+        }
+
         public async Task FavoriteTrack(long trackId)
         {
             try
             {
                 await FavoriteTrackByTrackId(trackId);
-                await OnInitializedAsync();
+                await LoadInitialData();
             }
             catch (Exception ex)
             {
@@ -48,7 +53,7 @@ namespace Chinook.Components
             try
             {
                 await UnfavoriteTrackByTrackId(trackId);
-                await OnInitializedAsync();
+                await LoadInitialData();
             }
             catch (Exception ex)
             {
@@ -62,7 +67,7 @@ namespace Chinook.Components
             {
                 await AddSelectedTrackToPlaylist();
                 CloseInfoMessage();
-                await OnInitializedAsync();
+                await LoadInitialData();
                 PlaylistDialog!.Close();
             }
             catch (Exception ex)

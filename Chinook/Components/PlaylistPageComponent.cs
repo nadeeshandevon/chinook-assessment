@@ -16,13 +16,18 @@ namespace Chinook.Components
         {
             try
             {
-                CurrentUserId = await GetUserId();
-                await LoadPlaylist();
+                await LoadInitialData();
             }
             catch (Exception ex)
             {
                 ErrorMessage = ex.Message;
             }
+        }
+
+        private async Task LoadInitialData()
+        {
+            CurrentUserId = await GetUserId();
+            await LoadPlaylist();
         }
 
         protected override async Task OnParametersSetAsync()
@@ -48,7 +53,7 @@ namespace Chinook.Components
             try
             {
                 await FavoriteTrackByTrackId(trackId);
-                await OnInitializedAsync();
+                await LoadInitialData();
             }
             catch (Exception ex)
             {
@@ -61,7 +66,7 @@ namespace Chinook.Components
             try
             {
                 await UnfavoriteTrackByTrackId(trackId);
-                await OnInitializedAsync();
+                await LoadInitialData();
             }
             catch (Exception ex)
             {
